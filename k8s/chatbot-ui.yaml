@@ -1,35 +1,60 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: chatbot-ui
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  namespace: chatbot-ui
+  name: chatbot-ui
+type: Opaque
+data:
+  OPENAI_API_KEY: <base64 encoded key>
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: chatbot
+  namespace: chatbot-ui
+  name: chatbot-ui
+  labels:
+    app: chatbot-ui
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: chatbot
+      app: chatbot-ui
   template:
     metadata:
       labels:
-        app: chatbot
+        app: chatbot-ui
     spec:
       containers:
-      - name: chatbot
-        image: sevenajay/chatbot:latest
-        ports:
-        - containerPort: 3000   # Use port 3000
-
+        - name: chatbot-ui
+          image: <docker user>/chatbot-ui:latest
+          resources: {}
+          ports:
+            - containerPort: 3000
+          env:
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: chatbot-ui
+                  key: OPENAI_API_KEY
 ---
-apiVersion: v1
 kind: Service
+apiVersion: v1
 metadata:
-  name: chatbot-service
+  namespace: chatbot-ui
+  name: chatbot-ui
+  labels:
+    app: chatbot-ui
 spec:
-  selector:
-    app: chatbot
   ports:
-  - protocol: TCP
-    port: 80                 # Expose port 80
-    targetPort: 3000
-  type: LoadBalancer
-
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 3000
+  selector:
+    app: chatbot-ui
+  type: ClusterIP
